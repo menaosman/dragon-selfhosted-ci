@@ -1,0 +1,61 @@
+name: Dragon on Self-Hosted Runner
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/dragon.yml"
+      - "scripts/dragon.sh"
+
+jobs:
+  roar:
+    # Target your self-hosted runner and a custom label you set during registration (e.g., 'local')
+    runs-on: [self-hosted, local]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure cowsay is installed
+        shell: bash
+        run: |
+          set -e
+          if command -v cowsay >/dev/null 2>&1; then
+            echo "cowsay already installed"
+          else
+            unameOut="$(uname -s)"
+            case "${unameOut}" in
+              Linux*)
+                if command -v apt-get >/dev/null 2>&1; then
+                  sudo apt-get update -y
+                  sudo apt-get install -y cowsay
+                elif command -v yum >/dev/null 2>&1; then
+                  sudo yum install -y cowsay || sudo dnf install -y cowsay
+                elif command -v dnf >/dev/null 2>&1; then
+                  sudo dnf install -y cowsay
+                elif command -v pacman >/dev/null 2>&1; then
+                  sudo pacman -Sy --noconfirm cowsay
+                else
+                  echo "No supported package manager found. Please install cowsay manually." >&2
+                  exit 1
+                fi
+                ;;
+              Darwin*)
+                if command -v brew >/dev/null 2>&1; then
+                  brew install cowsay
+                else
+                  echo "Homebrew not found. Install Homebrew or install cowsay manually." >&2
+                  exit 1
+                fi
+                ;;
+              *)
+                echo "Unsupported OS for auto-install. Install cowsay manually." >&2
+                exit 1
+                ;;
+            esac
+          fi
+
+      - name: Make script executable
+        run: chmod +x scripts/dragon.sh
+
+      - name: Breathe fire
+        run: scripts/dragon.sh
