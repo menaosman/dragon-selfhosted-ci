@@ -1,0 +1,74 @@
+mkdir -p .github/workflows scripts
+
+# workflow
+cat > .github/workflows/dragon.yml <<'YAML'
+name: Dragon on Self-Hosted Runner
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/dragon.yml"
+      - "scripts/dragon.sh"
+
+jobs:
+  roar:
+    runs-on: [self-hosted, local]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure cowsay is installed
+        shell: bash
+        run: |
+          set -e
+          if command -v cowsay >/dev/null 2>&1; then
+            echo "cowsay already installed"
+          else
+            if command -v apt-get >/dev/null 2>&1; then
+              sudo apt-get update -y
+              sudo apt-get install -y cowsay
+            elif command -v yum >/dev/null 2>&1; then
+              sudo yum install -y cowsay || sudo dnf install -y cowsay
+            elif command -v dnf >/dev/null 2>&1; then
+              sudo dnf install -y cowsay
+            elif command -v pacman >/dev/null 2>&1; then
+              sudo pacman -Sy --noconfirm cowsay
+            elif command -v brew >/dev/null 2>&1; then
+              brew install cowsay
+            else
+              echo "Please install cowsay manually." >&2
+              exit 1
+            fi
+          fi
+
+      - name: Make script executable
+        run: chmod +x scripts/dragon.sh
+
+      - name: Breathe fire
+        run: scripts/dragon.sh
+YAML
+
+# script
+cat > scripts/dragon.sh <<'BASH'
+#!/usr/bin/env bash
+set -euo pipefail
+msg='Run for cover, i am a Dragon'
+
+if ! command -v cowsay >/dev/null 2>&1; then
+  echo "cowsay is not installed." >&2
+  exit 1
+fi
+
+if cowsay -l | grep -qw dragon; then
+  cowsay -f dragon "$msg"
+else
+  echo "Warning: 'dragon' cowfile not found, using default."
+  cowsay "$msg"
+fi
+BASH
+
+chmod +x scripts/dragon.sh
+git add .github/workflows/dragon.yml scripts/dragon.sh
+git commit -m "Add dragon self-hosted workflow"
+git push
